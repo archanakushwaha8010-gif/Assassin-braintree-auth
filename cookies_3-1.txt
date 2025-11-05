@@ -1,0 +1,20 @@
+cookies = {
+    "nitroCachedPage": "0",
+    "sbjs_migrations": "1418474375998%3D1",
+    "sbjs_current_add": "fd%3D2025-11-05%2009%3A34%3A20%7C%7C%7Cep%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F%7C%7C%7Crf%3D%28none%29",
+    "sbjs_first_add": "fd%3D2025-11-05%2009%3A34%3A20%7C%7C%7Cep%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F%7C%7C%7Crf%3D%28none%29",
+    "sbjs_current": "typ%3Dtypein%7C%7C%7Csrc%3D%28direct%29%7C%7C%7Cmdm%3D%28none%29%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29",
+    "sbjs_first": "typ%3Dtypein%7C%7C%7Csrc%3D%28direct%29%7C%7C%7Cmdm%3D%28none%29%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29",
+    "sbjs_udata": "vst%3D1%7C%7C%7Cuip%3D%28none%29%7C%7C%7Cuag%3DMozilla%2F5.0%20%28Windows%20NT%2010.0%3B%20Win64%3B%20x64%3B%20rv%3A144.0%29%20Gecko%2F20100101%20Firefox%2F144.0",
+    "woocommerce_current_currency": "GBP",
+    "_gcl_au": "1.1.261034107.1762337063.1554302012.1762337149.1762337148",
+    "mcforms-38097157-sessionId": "\"7131ace3-fae2-4514-a0ef-41ca64904ae0\"",
+    "mailchimp.cart.current_email": "giwip99250@fandoe.com",
+    "sbjs_session": "pgs%3D6%7C%7C%7Ccpg%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2Faccount%3Fpassword-reset%3Dtrue",
+    "_ga_81KZY32HGV": "GS2.1.s1762337061$o1$g1$t1762337199$j59$l0$h1024455581",
+    "_ga_0YYGQ7K779": "GS2.1.s1762337061$o1$g1$t1762337199$j59$l0$h401408339",
+    "_ga": "GA1.1.297249076.1762337061",
+    "_fbp": "fb.1.1762337069508.575451042284330531"
+} debugger eval code:11:9
+
+​

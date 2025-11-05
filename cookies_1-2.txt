@@ -1,0 +1,18 @@
+cookies = {
+    "woocommerce_current_currency": "GBP",
+    "_ga": "GA1.1.1239918450.1762175176",
+    "_fbp": "fb.1.1762175191442.359575697624592036",
+    "mailchimp_user_email": "befek48096%40fergetic.com",
+    "_gcl_au": "1.1.294906603.1762175181.823752978.1762265069.1762265069",
+    "nitroCachedPage": "0",
+    "sbjs_migrations": "1418474375998%3D1",
+    "sbjs_current_add": "fd%3D2025-11-05%2008%3A19%3A18%7C%7C%7Cep%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F%7C%7C%7Crf%3Dhttps%3A%2F%2Fweb.telegram.org%2F",
+    "sbjs_first_add": "fd%3D2025-11-05%2008%3A19%3A18%7C%7C%7Cep%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F%7C%7C%7Crf%3Dhttps%3A%2F%2Fweb.telegram.org%2F",
+    "sbjs_current": "typ%3Dreferral%7C%7C%7Csrc%3Dweb.telegram.org%7C%7C%7Cmdm%3Dreferral%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%2F%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29",
+    "sbjs_first": "typ%3Dreferral%7C%7C%7Csrc%3Dweb.telegram.org%7C%7C%7Cmdm%3Dreferral%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%2F%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29",
+    "sbjs_udata": "vst%3D2%7C%7C%7Cuip%3D%28none%29%7C%7C%7Cuag%3DMozilla%2F5.0%20%28Windows%20NT%2010.0%3B%20Win64%3B%20x64%29%20AppleWebKit%2F537.36%20%28KHTML%2C%20like%20Gecko%29%20Chrome%2F142.0.0.0%20Safari%2F537.36%20Edg%2F142.0.0.0",
+    "sbjs_session": "pgs%3D1%7C%7C%7Ccpg%3Dhttps%3A%2F%2Fwww.tea-and-coffee.com%2F",
+    "_ga_81KZY32HGV": "GS2.1.s1762336507$o5$g0$t1762336507$j60$l0$h189126351",
+    "_ga_0YYGQ7K779": "GS2.1.s1762336507$o5$g0$t1762336507$j60$l0$h1341275379",
+    "mcforms-38097157-sessionId": "\"8cae6795-f68d-4ed4-a9ee-2a0914fb681a\""
+}
